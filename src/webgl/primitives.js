@@ -885,17 +885,26 @@ p5.RendererGL.prototype.curve=function
  * </code>
  * </div>
  */
-p5.RendererGL.prototype.line = function(x0,y0,z0,x1,y1,z1) {
-  if (typeof x0 !== 'undefined' ||
-      typeof y0 !== 'undefined' ||
-      typeof z0 !== 'undefined' ||
-      typeof x1 !== 'undefined' ||
-      typeof y1 !== 'undefined' ||
-      typeof z1 !== 'undefined')
+p5.RendererGL.prototype.line = function(a,b,c,d,e,f) {
+  if (typeof a !== 'undefined' &&
+      typeof b !== 'undefined' &&
+      typeof c !== 'undefined' &&
+      typeof d !== 'undefined' &&
+      typeof e !== 'undefined' &&
+      typeof f !== 'undefined')
   {
     this.beginShape();
-    this.vertex(x0, y0, z0);
-    this.vertex(x1, y1, z1);
+    this.vertex(a, b, c);
+    this.vertex(d, e, f);
+    this.endShape();
+  } else if (typeof a !== 'undefined' &&
+      typeof b !== 'undefined' &&
+      typeof c !== 'undefined' &&
+      typeof d !== 'undefined')
+  {
+    this.beginShape();
+    this.vertex(a, b, 0);
+    this.vertex(c, d, 0);
     this.endShape();
   }
   return this;
