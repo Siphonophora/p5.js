@@ -17,13 +17,20 @@ function draw(){
   for(var i = 0; i < 5; i++){
     for(var j = 0; j < 5; j++){
       fill(i * 40, j * 40, 0);
-      quad(
+      console.log(
         i * gap, j * gap, 0,
         i * gap + w, j * gap, 0,
         i * gap, j * gap + h, 0,
         i * gap + w, j * gap + h, 0
         );
+
+      quad(
+        i * gap, j * gap, 
+        i * gap + w, j * gap, 
+        i * gap + w, j * gap + h,
+        i * gap, j * gap + h
+        );
     }
   }
-
+ //noLoop();
 }

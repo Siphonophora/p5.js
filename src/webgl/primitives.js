@@ -775,39 +775,105 @@ p5.RendererGL.prototype.ellipse = function(args){
 
 
 p5.RendererGL.prototype.rect = function(args) {
-  var gId = 'rect|'+args[0]+'|'+args[1]+'|'+args[2]+'|'+
-  args[3];
-  var x = args[0];
-  var y = args[1];
-  var width = args[2];
-  var height = args[3];
-  var detailX = args[4] || 24;
-  var detailY = args[5] || 16;
+  var x  = args[0];
+  var y  = args[1];
+  var w  = args[2];
+  var h  = args[3];
+  var tl = args[4];
+  var tr = args[5];
+  var br = args[6];
+  var bl = args[7];
+  var detailX = args[8] || 6;
+  var detailY = 1;
+
+  var gId = 'rect|'+x+'|'+y+'|'+w+'|'+h+'|'+tl+'|'+tr+'|'+
+             br+'|'+bl+'|'+detailX;
   if(!this.geometryInHash(gId)){
     var _rect = function(){
-      var u,v,p;
-      for (var i = 0; i <= this.detailY; i++){
-        v = i / this.detailY;
-        for (var j = 0; j <= this.detailX; j++){
-          u = j / this.detailX;
-          // var _x = x-width/2;
-          // var _y = y-height/2;
-          p = new p5.Vector(
-            x + (width*u),
-            y + (height*v),
-            0
-          );
-          this.vertices.push(p);
-          this.uvs.push([u,v]);
+      this.strokeIndices = [];
+
+      if (typeof tl === 'undefined') {
+        // Squared corners onlu
+        this.vertices.push(new p5.Vector(x  ,y  ,0));
+        this.vertices.push(new p5.Vector(x+w,y  ,0));
+        this.vertices.push(new p5.Vector(x+w,y+h,0));
+        this.vertices.push(new p5.Vector(x  ,y+h,0));
+        this.uvs.push([0, 0], [1, 0], [1, 1],[0,1]);
+        this.strokeIndices = [[0,1], [1,2], [2,3], [3,0]];
+        this.faces.push([0,1,2]);
+        this.faces.push([2,3,0]);
+      } else {
+        // At least one rounded corner
+        // Set defaults when not specified
+        if (typeof tr === 'undefined') { tr = tl; }
+        if (typeof br === 'undefined') { br = tr; }
+        if (typeof bl === 'undefined') { bl = br; }
+
+        // Ensure half length is positive
+        var hw = Math.abs(w / 2);
+        var hh = Math.abs(h / 2);
+
+        // Clip radii if it is longer than half the length
+        if (hw < tl) { tl = hw; }
+        if (hh < tl) { tl = hh; }
+        if (hw < tr) { tr = hw; }
+        if (hh < tr) { tr = hh; }
+        if (hw < br) { br = hw; }
+        if (hh < br) { br = hh; }
+        if (hw < bl) { bl = hw; }
+        if (hh < bl) { bl = hh; }
+
+        // Array of vertices and radii from top left, clockwise
+        var a = [[x,y,tl],[x+w,y,bl],[x+w,y+h,br],[x,y+h,tr]];
+        // If negative w or h, rearrange that array
+        if (h < 0) { a = [a[3],a[2],a[1],a[0]];}
+        if (w < 0) { a = [a[1],a[0],a[3],a[2]];}
+
+        // Create Center
+        this.vertices.push(new p5.Vector(x+w/2,y+h/2,0));
+
+        for (var i = 0; i < a.length; i++) {
+          if(a[i][2] === 0){
+            this.vertices.push(new p5.Vector(a[i][0],a[i][1],0));
+          } else {
+            var _r = a[i][2];
+            var _x = a[i][0] > this.vertices[0].x ? a[i][0] - _r : a[i][0] + _r;
+            var _y = a[i][1] > this.vertices[0].y ? a[i][1] - _r : a[i][1] + _r;
+
+            for (var j = 0; j <= detailX ; j++) {
+              var theta = Math.PI + 1/2*Math.PI*i + 1/2*Math.PI*(j/(detailX));
+              var _xt = _x + _r * Math.cos(theta);
+              var _yt = _y + _r * Math.sin(theta);
+              this.vertices.push(new p5.Vector(_xt, _yt, 0));
+            }
+          }
         }
+
+        //Calculate uvs by remapping vertices
+        for (i = 0; i < this.vertices.length; i++) {
+          this.uvs.push([(this.vertices[i].x - x )/ w,
+                         (this.vertices[i].y - y )/ h]);
+        }
+
+        //Create the faces and stroke along the edges
+        for (i = 0; i < this.vertices.length -2; i++) {
+          this.faces.push([0, i+1, i+2]);
+          this.strokeIndices.push([i+1, i+2]);
+        }
+        this.faces.push([0, this.vertices.length - 1, 1]);
+        this.strokeIndices.push([this.vertices.length - 1, 1]);
       }
     };
+
     var rectGeom = new p5.Geometry(detailX,detailY,_rect);
-    rectGeom
-      .computeFaces()
-      .computeNormals()
-      ._makeTriangleEdges();
-    this._edgesToVertices(rectGeom);
+    rectGeom.computeNormals();
+    if(detailX <= 6) {
+      rectGeom._makeTriangleEdges();
+      this._edgesToVertices(rectGeom);
+    } else {
+      console.log('Cannot stroke rect with more'+
+        ' than 6 detailX');
+    }
     this.createBuffers(gId, rectGeom);
   }
   this.drawBuffers(gId);

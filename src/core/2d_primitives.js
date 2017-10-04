@@ -443,6 +443,9 @@ p5.prototype.quad = function() {
 * @param  {Number} [tr] optional radius of top-right corner.
 * @param  {Number} [br] optional radius of bottom-right corner.
 * @param  {Number} [bl] optional radius of bottom-left corner.
+* @param  {Number} [detailX] (webGL Only) optional argument specifies
+*                       the number of verticies which define
+*                       each curved corner. Default is 6.
 * @return {p5}          the p5 object.
 * @example
 * <div>
@@ -471,16 +474,6 @@ p5.prototype.quad = function() {
 * 55x55 white rect with black outline in mid-right of canvas.
 * 55x55 white rect with black outline and rounded edges in mid-right of canvas.
 * 55x55 white rect with black outline and rounded edges of different radii.
-*/
-/**
-* @method rect
-* @param  {Number} x
-* @param  {Number} y
-* @param  {Number} w
-* @param  {Number} h
-* @param  {Number} [detailX]
-* @param  {Number} [detailY]
-* @chainable
 */
 p5.prototype.rect = function() {
   var args = new Array(arguments.length);
