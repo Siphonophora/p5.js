@@ -10,40 +10,76 @@ var p5 = require('../core/core');
  * @param  {function | Object} vertData callback function or Object
  *                     containing routine(s) for vertex data generation
  * @param  {Number} [detailX] number of vertices on horizontal surface
- * @param  {Number} [detailY] number of vertices on horizontal surface
+ * @param  {Number} [detailY] number of vertices on vertical surface
  * @param {function} [callback] function to call upon object instantiation.
  *
  */
 p5.Geometry = function
 (detailX, detailY, callback){
+  //The following properties can be defined in the callback function
+
   //an array containing every vertex
   //@type [p5.Vector]
   this.vertices = [];
 
-  //an array containing every vertex for stroke drawing
+  //a 2D array containing uvs for every vertex (used for texture mapping).
+  //The length of uvs must match the length of vertices
+  //[[0.0,0.0],[1.0,0.0], ...]
+  this.uvs = [];
+
+  //OPTIONAL - if you wish to manually define which edges have rendered strokes
+  //then provide an array of vertices to draw the edges between. You can
+  //in order to render the strokes, you must call _makeTriangleEdges() after
+  //creating the geometry
+  //[[0,1],[1,3], ...]
+  this.strokeIndices = [];
+
+  //If you are not relying on computeFaces() to generate faces,
+  //you should define them in the callback. The an array containing
+  //each three vertex indices that form a face
+  //[[0, 1, 2], [2, 1, 3], ...]
+  this.faces = [];
+
+  // The detailX and detailY must be defined if you going to rely on the
+  // computeFaces() function to create the faces
+
+  this.detailX = (detailX !== undefined) ? detailX: 1;
+  this.detailY = (detailY !== undefined) ? detailY: 1;
+
+
+  //The following properties are generally calculated by functions after
+  //creating new p5.Geometry.
+
+  //If you didn't specify faces, call computFaces();
+
+  //Requires faces. The type of geometry determines which function to call below.
+  //contains an array containing 1 normal vector per vertex
+  //@type [p5.Vector]
+  //[p5.Vector, p5.Vector, p5.Vector,p5.Vector, p5.Vector, p5.Vector,...]
+  this.vertexNormals = [];
+
+
+  //a 2D array containing edge connectivity pattern for create line vertices
+  //this should be filed by _makeTriangleEdges(). See strokeIndicies above if you
+  //wish direct control over edges
+  this.edges = [];
+
+
+  //Onces edges are computed call _edgesToVertices() to populate line vertices
+  // an array containing every vertex for stroke drawing.
   this.lineVertices = [];
 
+  //Populated at the same time as linevertices by _edgesToVertices()
   //an array 1 normal per lineVertex with
   //final position representing which direction to
   //displace for strokeWeight
   //[[0,0,-1,1], [0,1,0,-1] ...];
   this.lineNormals = [];
 
-  //an array containing 1 normal per vertex
-  //@type [p5.Vector]
-  //[p5.Vector, p5.Vector, p5.Vector,p5.Vector, p5.Vector, p5.Vector,...]
-  this.vertexNormals = [];
-  //an array containing each three vertex indices that form a face
-  //[[0, 1, 2], [2, 1, 3], ...]
-  this.faces = [];
-  //a 2D array containing uvs for every vertex
-  //[[0.0,0.0],[1.0,0.0], ...]
-  this.uvs = [];
-  // a 2D array containing edge connectivity pattern for create line vertices
-  //based on faces for most objects;
-  this.edges = [];
-  this.detailX = (detailX !== undefined) ? detailX: 1;
-  this.detailY = (detailY !== undefined) ? detailY: 1;
+
+
+
+
   if(callback instanceof Function){
     callback.call(this);
   }
@@ -182,7 +218,9 @@ p5.Geometry.prototype._makeTriangleEdges = function() {
 /**
  * Create 4 vertices for each stroke line, two at the beginning position
  * and two at the end position. These vertices are displaced relative to
- * that line's normal on the GPU
+ * that line's normal on the GPU.
+ * Part of the p5.RendererGL prototype, because it needs to be available
+ * for geometry rendered in immediate mode.
  * @return {p5.Geometry}
  */
 p5.RendererGL.prototype._edgesToVertices = function(geom) {
@@ -237,5 +275,46 @@ p5.Geometry.prototype.normalize = function() {
   }
   return this;
 };
+
+/* Checks the internal consistency of vertices, uvs, strokeindicies
+ * faces, detailX and detailY.
+ * Should be called directly after creating new p5.Geometry
+ * Inteded primarily for developers.
+ */
+p5.Geometry.prototype.validateInput = function(){
+
+  if(this.vertices.length === 0){
+    console.log( 'No vertices provided.');
+  }
+  if(this.uvs.length === 0){
+    console.log( 'No uvs provided.');
+  }
+  if(this.vertices.length !== this.uvs.length){
+    console.log( 'Vertices and uvs are different lengths:',
+                 this.vertices, this.uvs);
+  }
+  if(this.detailX > 1 && this.detailY > 1 &&
+     this.vertices.length !== this.detailY*this.detailX){
+
+    console.log( 'Detail X and Y were specified > 1, but vertices were not X*Y '+
+              'long (calls to computeFaces() will not work). ');
+  }
+  for (var i = 0; i < this.faces.length; i++) {
+    var face = this.faces[i];
+    if(face.length !== 3){
+      console.log( 'Face ' +i+ ' does not have 3 vertices: ', face);
+    }
+    for (var j = 0; j < face.length; j++) {
+      if(face[j]<0 || face[j] > this.vertices.length - 1){
+        console.log( 'Face ' +i+ ' refers to a vertex index that doesnt exist: ',
+                     face);
+      }
+    }
+  }
+
+
+  return this;
+};
+
 
 module.exports = p5.Geometry;

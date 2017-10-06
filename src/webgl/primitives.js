@@ -221,42 +221,7 @@ p5.prototype.sphere = function(){
   var detailX = typeof args[1] === 'number' ? args[1] : 24;
   var detailY = typeof args[2] === 'number' ? args[2] : 16;
 
-  var gId = 'sphere|'+radius+'|'+detailX+'|'+detailY;
-  if(!this._renderer.geometryInHash(gId)){
-    var _sphere = function(){
-      var u,v,p;
-      for (var i = 0; i <= this.detailY; i++){
-        v = i / this.detailY;
-        for (var j = 0; j <= this.detailX; j++){
-          u = j / this.detailX;
-          var theta = 2 * Math.PI * u;
-          var phi = Math.PI * v - Math.PI / 2;
-          p = new p5.Vector(radius * Math.cos(phi) * Math.sin(theta),
-            radius * Math.sin(phi),
-            radius * Math.cos(phi) * Math.cos(theta));
-          this.vertices.push(p);
-          this.uvs.push([u,v]);
-        }
-      }
-    };
-    var sphereGeom = new p5.Geometry(detailX, detailY, _sphere);
-    sphereGeom
-      .computeFaces()
-      .computeNormals()
-      .averageNormals()
-      .averagePoleNormals();
-    if(detailX <= 24 && detailY <= 16) {
-      sphereGeom._makeTriangleEdges();
-      this._renderer._edgesToVertices(sphereGeom);
-    } else {
-      console.log('Cannot draw stroke on sphere objects with more'+
-        ' than 24 detailX or 16 detailY');
-    }
-
-    this._renderer.createBuffers(gId, sphereGeom);
-  }
-  this._renderer.drawBuffers(gId);
-
+  this._ellipsoid(radius, radius, radius, detailX, detailY, 'sphere');
   return this;
 };
 
@@ -265,14 +230,15 @@ p5.prototype.sphere = function(){
 * @private
 * helper function for creating both cones and cyllinders
 */
-var _truncatedCone = function(
+p5.prototype._truncatedCone = function(
   bottomRadius,
   topRadius,
   height,
   detailX,
   detailY,
   topCap,
-  bottomCap) {
+  bottomCap,
+  shape) {
   detailX = (detailX < 3) ? 3 : detailX;
   detailY = (detailY < 1) ? 1 : detailY;
   topCap = (topCap === undefined) ? true : topCap;
@@ -280,63 +246,85 @@ var _truncatedCone = function(
   var extra = (topCap ? 2 : 0) + (bottomCap ? 2 : 0);
   var vertsAroundEdge = detailX + 1;
 
-  // ensure constant slant
-  var slant = Math.atan2(bottomRadius - topRadius, height);
-  var start = topCap ? -2 : 0;
-  var end = detailY + (bottomCap ? 2 : 0);
-  var yy, ii;
-  for (yy = start; yy <= end; ++yy) {
-    var v = yy / detailY;
-    var y = height * v;
-    var ringRadius;
-    if (yy < 0) {
-      y = 0;
-      v = 1;
-      ringRadius = bottomRadius;
-    } else if (yy > detailY) {
-      y = height;
-      v = 1;
-      ringRadius = topRadius;
+
+  var gId = shape+'|'+height+'|'+bottomRadius+'|'+
+          topRadius+'|'+detailX+'|'+detailY;
+  if(!this._renderer.geometryInHash(gId)){
+    var __truncatedCone = function(){
+
+      // ensure constant slant
+      var slant = Math.atan2(bottomRadius - topRadius, height);
+      var start = topCap ? -2 : 0;
+      var end = detailY + (bottomCap ? 2 : 0);
+      var yy, ii;
+      for (yy = start; yy <= end; ++yy) {
+        var v = yy / detailY;
+        var y = height * v;
+        var ringRadius;
+        if (yy < 0) {
+          y = 0;
+          v = 1;
+          ringRadius = bottomRadius;
+        } else if (yy > detailY) {
+          y = height;
+          v = 1;
+          ringRadius = topRadius;
+        } else {
+          ringRadius = bottomRadius +
+            (topRadius - bottomRadius) * (yy / detailY);
+        }
+        if (yy === -2 || yy === detailY + 2) {
+          ringRadius = 0;
+          v = 0;
+        }
+        y -= height / 2;
+        for (ii = 0; ii < vertsAroundEdge; ++ii) {
+          //VERTICES
+          this.vertices.push(
+            new p5.Vector(
+              Math.sin(ii*Math.PI * 2 /detailX) * ringRadius,
+              y,
+              Math.cos(ii*Math.PI * 2 /detailX) * ringRadius)
+            );
+          //VERTEX NORMALS
+          this.vertexNormals.push(
+            new p5.Vector(
+              (yy < 0 || yy > detailY) ? 0 :
+              (Math.sin(ii * Math.PI * 2 / detailX) * Math.cos(slant)),
+              (yy < 0) ? -1 : (yy > detailY ? 1 : Math.sin(slant)),
+              (yy < 0 || yy > detailY) ? 0 :
+              (Math.cos(ii * Math.PI * 2 / detailX) * Math.cos(slant)))
+            );
+          //UVs
+          this.uvs.push([(ii / detailX), v]);
+        }
+      }
+      for (yy = 0; yy < detailY + extra; ++yy) {
+        for (ii = 0; ii < detailX; ++ii) {
+          this.faces.push([vertsAroundEdge * (yy + 0) + 0 + ii,
+            vertsAroundEdge * (yy + 0) + 1 + ii,
+            vertsAroundEdge * (yy + 1) + 1 + ii]);
+          this.faces.push([vertsAroundEdge * (yy + 0) + 0 + ii,
+            vertsAroundEdge * (yy + 1) + 1 + ii,
+            vertsAroundEdge * (yy + 1) + 0 + ii]);
+        }
+      }
+
+    };
+    var cylinderGeom = new p5.Geometry(detailX, detailY, __truncatedCone);
+
+    cylinderGeom.computeNormals();
+    if(detailX <= 24 && detailY <= 16) {
+      cylinderGeom._makeTriangleEdges();
+      this._renderer._edgesToVertices(cylinderGeom);
     } else {
-      ringRadius = bottomRadius +
-        (topRadius - bottomRadius) * (yy / detailY);
+      console.log('Cannot draw stroke on cylinder objects with more'+
+      ' than 24 detailX or 16 detailY');
     }
-    if (yy === -2 || yy === detailY + 2) {
-      ringRadius = 0;
-      v = 0;
-    }
-    y -= height / 2;
-    for (ii = 0; ii < vertsAroundEdge; ++ii) {
-      //VERTICES
-      this.vertices.push(
-        new p5.Vector(
-          Math.sin(ii*Math.PI * 2 /detailX) * ringRadius,
-          y,
-          Math.cos(ii*Math.PI * 2 /detailX) * ringRadius)
-        );
-      //VERTEX NORMALS
-      this.vertexNormals.push(
-        new p5.Vector(
-          (yy < 0 || yy > detailY) ? 0 :
-          (Math.sin(ii * Math.PI * 2 / detailX) * Math.cos(slant)),
-          (yy < 0) ? -1 : (yy > detailY ? 1 : Math.sin(slant)),
-          (yy < 0 || yy > detailY) ? 0 :
-          (Math.cos(ii * Math.PI * 2 / detailX) * Math.cos(slant)))
-        );
-      //UVs
-      this.uvs.push([(ii / detailX), v]);
-    }
+    this._renderer.createBuffers(gId, cylinderGeom);
   }
-  for (yy = 0; yy < detailY + extra; ++yy) {
-    for (ii = 0; ii < detailX; ++ii) {
-      this.faces.push([vertsAroundEdge * (yy + 0) + 0 + ii,
-        vertsAroundEdge * (yy + 0) + 1 + ii,
-        vertsAroundEdge * (yy + 1) + 1 + ii]);
-      this.faces.push([vertsAroundEdge * (yy + 0) + 0 + ii,
-        vertsAroundEdge * (yy + 1) + 1 + ii,
-        vertsAroundEdge * (yy + 1) + 0 + ii]);
-    }
-  }
+
+  this._renderer.drawBuffers(gId);
 };
 
 /**
@@ -373,34 +361,14 @@ p5.prototype.cylinder = function(){
   for (var i = 0; i < args.length; ++i) {
     args[i] = arguments[i];
   }
-  var radius = args[0] || 50;
-  var height = args[1] || radius;
-  var detailX = typeof args[2] === 'number' ? args[2] : 24;
-  var detailY = typeof args[3] === 'number' ? args[3] : 16;
-  var gId = 'cylinder|'+radius+'|'+height+'|'+detailX+'|'+detailY;
-  if(!this._renderer.geometryInHash(gId)){
-    var cylinderGeom = new p5.Geometry(detailX, detailY);
-    _truncatedCone.call(
-      cylinderGeom,
-      radius,
-      radius,
-      height,
-      detailX,
-      detailY,
-      true,true);
-    cylinderGeom.computeNormals();
-    if(detailX <= 24 && detailY <= 16) {
-      cylinderGeom._makeTriangleEdges();
-      this._renderer._edgesToVertices(cylinderGeom);
-    } else {
-      console.log('Cannot draw stroke on cylinder objects with more'+
-      ' than 24 detailX or 16 detailY');
-    }
-    this._renderer.createBuffers(gId, cylinderGeom);
-  }
+  var height  = args[0] || 50;
+  var radius1 = args[1] || height;
+  var radius2 = args[2] || radius1;
+  var detailX = typeof args[3] === 'number' ? args[3] : 24;
+  var detailY = typeof args[4] === 'number' ? args[4] : 16;
 
-  this._renderer.drawBuffers(gId);
-
+  this._truncatedCone(radius1, radius2, height, detailX, detailY,
+                      true, true, 'cylinder');
   return this;
 };
 
@@ -443,31 +411,8 @@ p5.prototype.cone = function(){
   var height = args[1] || baseRadius;
   var detailX = typeof args[2] === 'number' ? args[2] : 24;
   var detailY = typeof args[3] === 'number' ? args[3] : 16;
-  var gId = 'cone|'+baseRadius+'|'+height+'|'+detailX+'|'+detailY;
-  if(!this._renderer.geometryInHash(gId)){
-    var coneGeom = new p5.Geometry(detailX, detailY);
-    _truncatedCone.call(coneGeom,
-      baseRadius,
-      0,//top radius 0
-      height,
-      detailX,
-      detailY,
-      true,
-      true);
-    //for cones we need to average Normals
-    coneGeom.computeNormals();
-    if(detailX <= 24 && detailY <= 16) {
-      coneGeom._makeTriangleEdges();
-      this._renderer._edgesToVertices(coneGeom);
-    } else {
-      console.log('Cannot draw stroke on cone objects with more'+
-      ' than 24 detailX or 16 detailY');
-    }
-    this._renderer.createBuffers(gId, coneGeom);
-  }
 
-  this._renderer.drawBuffers(gId);
-
+  this._truncatedCone(baseRadius, 0, height, detailX, detailY, true, true, 'cone');
   return this;
 };
 
@@ -506,18 +451,26 @@ p5.prototype.ellipsoid = function(){
   for (var i = 0; i < args.length; ++i) {
     args[i] = arguments[i];
   }
-  var detailX = typeof args[3] === 'number' ? args[3] : 24;
-  var detailY = typeof args[4] === 'number' ? args[4] : 24;
   var radiusX = args[0] || 50;
   var radiusY = args[1] || radiusX;
   var radiusZ = args[2] || radiusX;
+  var detailX = typeof args[3] === 'number' ? args[3] : 24;
+  var detailY = typeof args[4] === 'number' ? args[4] : 24;
 
-  var gId = 'ellipsoid|'+radiusX+'|'+radiusY+
+  this._ellipsoid(radiusX, radiusY, radiusZ, detailX,
+                  detailY, 'ellipsoid');
+  return this;
+};
+
+
+p5.prototype._ellipsoid = function(radiusX, radiusY, radiusZ,
+                                   detailX, detailY, shape){
+  var gId = shape+'|'+radiusX+'|'+radiusY+
   '|'+radiusZ+'|'+detailX+'|'+detailY;
 
 
   if(!this._renderer.geometryInHash(gId)){
-    var _ellipsoid = function(){
+    var __ellipsoid = function(){
       var u,v,p;
       for (var i = 0; i <= this.detailY; i++){
         v = i / this.detailY;
@@ -533,7 +486,7 @@ p5.prototype.ellipsoid = function(){
         }
       }
     };
-    var ellipsoidGeom = new p5.Geometry(detailX, detailY,_ellipsoid);
+    var ellipsoidGeom = new p5.Geometry(detailX, detailY,__ellipsoid);
     ellipsoidGeom
       .computeFaces()
       .computeNormals();
@@ -541,7 +494,7 @@ p5.prototype.ellipsoid = function(){
       ellipsoidGeom._makeTriangleEdges();
       this._renderer._edgesToVertices(ellipsoidGeom);
     } else {
-      console.log('Cannot draw stroke on ellipsoids with more'+
+      console.log('Cannot draw stroke on '+shape+' with more'+
       ' than 24 detailX or 24 detailY');
     }
     this._renderer.createBuffers(gId, ellipsoidGeom);
@@ -550,6 +503,7 @@ p5.prototype.ellipsoid = function(){
   this._renderer.drawBuffers(gId);
   return this;
 };
+
 
 /**
  * Draw a torus with given radius and tube radius
@@ -660,7 +614,6 @@ p5.RendererGL.prototype.arc = function(){
             stop+'|'+ mode+'|'+ detailX;
   if(!this.geometryInHash(gId)){
     var _arc = function(){
-      this.strokeIndices = [];
       var aAdj = shape === 'ellipse' ? 1 : 0;
 
       //Define the arc
@@ -714,6 +667,7 @@ p5.RendererGL.prototype.arc = function(){
 
     //Create the arc and set it up
     var arcGeom = new p5.Geometry(detailX,detailY,_arc);
+    arcGeom.validateInput();
     arcGeom.computeNormals();
     if(detailX <= 24) {
       arcGeom._makeTriangleEdges();
@@ -790,7 +744,6 @@ p5.RendererGL.prototype.rect = function(args) {
              br+'|'+bl+'|'+detailX;
   if(!this.geometryInHash(gId)){
     var _rect = function(){
-      this.strokeIndices = [];
 
       if (typeof tl === 'undefined') {
         // Squared corners onlu
@@ -824,7 +777,7 @@ p5.RendererGL.prototype.rect = function(args) {
         if (hh < bl) { bl = hh; }
 
         // Array of vertices and radii from top left, clockwise
-        var a = [[x,y,tl],[x+w,y,bl],[x+w,y+h,br],[x,y+h,tr]];
+        var a = [[x,y,tl],[x+w,y,tr],[x+w,y+h,br],[x,y+h,bl]];
         // If negative w or h, rearrange that array
         if (h < 0) { a = [a[3],a[2],a[1],a[0]];}
         if (w < 0) { a = [a[1],a[0],a[3],a[2]];}
