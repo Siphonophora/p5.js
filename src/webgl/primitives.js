@@ -159,7 +159,7 @@ p5.prototype.box = function(){
             ((d & 2) - 1) *height/2,
             ((d & 4) / 2 - 1) * depth/2);
           this.vertices.push( octant );
-          this.uvs.push([j & 1, (j & 2) / 2]);
+          this.uvs.push([(j & 1)*2.2, ((j & 2) / 2)*2.2]);
           id++;
         }
         this.faces.push([v, v + 1, v + 2]);
@@ -167,6 +167,7 @@ p5.prototype.box = function(){
       }
     };
     var boxGeom = new p5.Geometry(detailX,detailY, _box);
+    console.log(boxGeom)
     boxGeom.computeNormals();
     if(detailX <= 4 && detailY <= 4) {
       boxGeom._makeTriangleEdges();
@@ -252,75 +253,61 @@ p5.prototype._truncatedCone = function(
   if(!this._renderer.geometryInHash(gId)){
     var __truncatedCone = function(){
 
+      var ring = function(h, r, detail, vertices){
+
+        for (var i = 0; i <= detail; i++) {
+          vertices.push(new p5.Vector(
+              Math.cos(i*Math.PI * 2 /detail) * r,
+              Math.sin(i*Math.PI * 2 /detail) * r,
+              h)
+            )
+        }
+      }
       // ensure constant slant
       var slant = Math.atan2(bottomRadius - topRadius, height);
-      var start = topCap ? -2 : 0;
-      var end = detailY + (bottomCap ? 2 : 0);
-      var yy, ii;
-      for (yy = start; yy <= end; ++yy) {
-        var v = yy / detailY;
-        var y = height * v;
-        var ringRadius;
-        if (yy < 0) {
-          y = 0;
-          v = 1;
-          ringRadius = bottomRadius;
-        } else if (yy > detailY) {
-          y = height;
-          v = 1;
-          ringRadius = topRadius;
-        } else {
-          ringRadius = bottomRadius +
-            (topRadius - bottomRadius) * (yy / detailY);
-        }
-        if (yy === -2 || yy === detailY + 2) {
-          ringRadius = 0;
-          v = 0;
-        }
-        y -= height / 2;
-        for (ii = 0; ii < vertsAroundEdge; ++ii) {
-          //VERTICES
-          this.vertices.push(
-            new p5.Vector(
-              Math.sin(ii*Math.PI * 2 /detailX) * ringRadius,
-              y,
-              Math.cos(ii*Math.PI * 2 /detailX) * ringRadius)
-            );
-          //VERTEX NORMALS
-          this.vertexNormals.push(
-            new p5.Vector(
-              (yy < 0 || yy > detailY) ? 0 :
-              (Math.sin(ii * Math.PI * 2 / detailX) * Math.cos(slant)),
-              (yy < 0) ? -1 : (yy > detailY ? 1 : Math.sin(slant)),
-              (yy < 0 || yy > detailY) ? 0 :
-              (Math.cos(ii * Math.PI * 2 / detailX) * Math.cos(slant)))
-            );
-          //UVs
-          this.uvs.push([(ii / detailX), v]);
-        }
+
+      ring(0,0,detailX, this.vertices)
+      ring(0,bottomRadius,detailX, this.vertices)
+      ring(height/2,height*(1-slant),detailX, this.vertices)
+      ring(height,topRadius,detailX, this.vertices)
+      ring(height,0,detailX, this.vertices)
+
+      // if(bottomCap){
+      //   for (var i = 1; i <= detailX; i++) {
+      //     this.strokeIndices.push([detailX+i, detailX+1+i ])   
+      //   }
+      // }
+      // if(topCap){
+      //   for (var i = 1; i <= detailX; i++) {
+      //     //work from the end so we don't need to test for bottom cap
+      //     this.strokeIndices.push([this.vertices.length - detailX-1-i,
+      //                              this.vertices.length - detailX-2-i ])   
+      //   }
+      // }
+      //Vertical lines
+      for (var i = 1; i < detailY; i++) {
+        this.strokeIndices.push([detailX*i + i, detailX * (i+1) + i])
       }
-      for (yy = 0; yy < detailY + extra; ++yy) {
-        for (ii = 0; ii < detailX; ++ii) {
-          this.faces.push([vertsAroundEdge * (yy + 0) + 0 + ii,
-            vertsAroundEdge * (yy + 0) + 1 + ii,
-            vertsAroundEdge * (yy + 1) + 1 + ii]);
-          this.faces.push([vertsAroundEdge * (yy + 0) + 0 + ii,
-            vertsAroundEdge * (yy + 1) + 1 + ii,
-            vertsAroundEdge * (yy + 1) + 0 + ii]);
-        }
+
+      //Generic UVs
+      for (var i = 0; i < this.vertices.length; i++) {
+        this.uvs.push([0,0]);
       }
+
 
     };
     var cylinderGeom = new p5.Geometry(detailX, detailY, __truncatedCone);
-
+    cylinderGeom.validateInput();
+    cylinderGeom.computeFaces();
     cylinderGeom.computeNormals();
-    if(detailX <= 24 && detailY <= 16) {
-      cylinderGeom._makeTriangleEdges();
+    // if(detailX <= 24 && detailY <= 16) {
+       cylinderGeom._makeTriangleEdges();
       this._renderer._edgesToVertices(cylinderGeom);
-    } else {
-      console.log('Cannot draw stroke on cylinder objects with more'+
-      ' than 24 detailX or 16 detailY');
-    }
+    // } else {
+    //   console.log('Cannot draw stroke on cylinder objects with more'+
+    //   ' than 24 detailX or 16 detailY');
+    // }
+     console.log(cylinderGeom);
     this._renderer.createBuffers(gId, cylinderGeom);
   }
 

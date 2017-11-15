@@ -1,7 +1,7 @@
 var testID = 1 
 var setStroke = true;
 var setFill = true;
-var nTests = 21   //This setting must equal the number of tests available in the sketch.js;
+var nTests = 25   //This setting must equal the number of tests available in the sketch.js;
 
 function setup(){
 	refreshTests();

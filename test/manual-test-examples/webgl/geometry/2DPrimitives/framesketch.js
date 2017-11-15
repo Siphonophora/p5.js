@@ -102,56 +102,32 @@ function draw(){
 
   if(thisOne()){
     rect(0,0, 175, 125 );
-    fill(0,100, 250);
-    rect(0,0,-175, 125 );
-    rect(0,0,-175, -125);
-    rect(0,0, 175, -125);
-    testinfo.html('Rect, all combinations of positive and negative width and height')
+    testinfo.html('Rectangle')
   }
 
   if(thisOne()){
     rect(0,0,  175, 125 , 25);
-    fill(0,100, 250);
-    rect(0,0, -175, 125 , 25);
-    rect(0,0, -175, -125, 25);
-    rect(0,0,  175, -125, 25);
-    testinfo.html('Rect, one radius argument, all combinations of positive and negative width and height')
+    testinfo.html('Rect, one radius argument')
   }
 
   if(thisOne()){
     rect(0,0,  175, 125 , 25, 10);
-    fill(0,100, 250);
-    rect(0,0, -175, 125 , 25, 10);
-    rect(0,0, -175, -125, 25, 10);
-    rect(0,0,  175, -125, 25, 10);
-    testinfo.html('Rect, two radius arguments, all combinations of positive and negative width and height')
+    testinfo.html('Rect, two radius arguments')
   }
 
   if(thisOne()){
     rect(0,0,  175, 125 , 25, 10, 55);
-    fill(0,100, 250);
-    rect(0,0, -175, 125 , 25, 10, 55);
-    rect(0,0, -175, -125, 25, 10, 55);
-    rect(0,0,  175, -125, 25, 10, 55);
-    testinfo.html('Rect, three radius arguments, all combinations of positive and negative width and height')
+    testinfo.html('Rect, three radius arguments')
   }
 
   if(thisOne()){
     rect(0,0,  175, 125 , 25, 10, 15, 400);
-    fill(0,100, 250);
-    rect(0,0, -175, 125 , 25, 10, 15, 400);
-    rect(0,0, -175, -125, 25, 10, 15, 400);
-    rect(0,0,  175, -125, 25, 10, 15, 400);
-    testinfo.html('Rect, four radius arguments, all combinations of positive and negative width and height')
+    testinfo.html('Rect, four radius arguments')
   }
 
   if(thisOne()){
     rect(0,0,  175, 125 , 1000);
-    fill(0,100, 250);
-    rect(0,0, -175, 125 , 1000);
-    rect(0,0, -175, -125, 1000);
-    rect(0,0,  175, -125, 1000);
-    testinfo.html('Rect, four radius arguments which are larger than the rect, all combinations of positive and negative width and height')
+    testinfo.html('Rect, four radius arguments which are larger than the rect')
   }
 
   if(thisOne()){
@@ -260,6 +236,15 @@ function draw(){
     testinfo.html('Points, with size and color animation')
   }
 
+  if(thisOne()){
+    background(0);
+    noStroke();
+    smooth();
+    ellipse(-100, -100, 200, 200);
+    noSmooth();
+    ellipse( 100,  100, 200, 200);
+    testinfo.html('Smooth test (no smooth is on the bottom right)')
+  }
 }
 
 function thisOne(){

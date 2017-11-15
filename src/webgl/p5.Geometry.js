@@ -199,7 +199,7 @@ p5.Geometry.prototype.averagePoleNormals = function() {
  * @return {p5.Geometry}
  */
 p5.Geometry.prototype._makeTriangleEdges = function() {
-  if (Array.isArray(this.strokeIndices)) {
+  if (Array.isArray(this.strokeIndices) && this.strokeIndices.length !== 0) {
     for (var i=0, max=this.strokeIndices.length; i<max; i++) {
       this.edges.push(this.strokeIndices[i]);
     }
